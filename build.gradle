@@ -1,0 +1,33 @@
+buildscript {
+  repositories {
+    maven {
+      url = 'https://artifactory.n7lab.io/maven'
+      credentials {
+        username = artifactoryUsername
+        password = artifactoryPassword
+      }
+    }
+  }
+}
+
+ext {
+  // adding timestamp of build to project properties (displayed within spring boot banner)
+  timestampOfBuild = new Date().format("yyyy-MM-dd'T'HH:mm:ssZ")
+  yearOfBuild = new Date().format("yyyy")
+}
+
+allprojects {
+  repositories {
+    maven {
+      url = "https://artifactory.n7lab.io/maven"
+      credentials {
+        username = artifactoryUsername
+        password = artifactoryPassword
+      }
+    }
+  }
+
+  group = "com.neubert.skaffold"
+  version = "0.0.1"
+}
+

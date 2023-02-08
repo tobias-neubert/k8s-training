@@ -1,0 +1,37 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: motd-deployment
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: motd-service
+      version: v1
+  template:
+    metadata:
+      name: motd-service
+      labels:
+        app: motd-service
+        version: v1
+    spec:
+      containers:
+        - name: motd-service
+          image: neubert/motd-service
+          imagePullPolicy: IfNotPresent
+          ports:
+            - containerPort: 8080
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: motd-service
+  labels:
+    app: motd-service
+spec:
+  type: ClusterIP
+  ports:
+    - port: 8080
+      name: http
+  selector:
+    app: motd-service

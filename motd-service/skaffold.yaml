@@ -1,0 +1,13 @@
+apiVersion: skaffold/v4beta1
+kind: Config
+metadata:
+  name: motd-service
+build:
+  artifacts:
+  - image: neubert/motd-service
+    jib:
+      project: motd-service
+manifests:
+  rawYaml:
+  - k8s/deployment.yaml
+  - k8s/istio.yaml
