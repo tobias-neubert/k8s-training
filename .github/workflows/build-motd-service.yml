@@ -1,0 +1,61 @@
+name: Motd Service
+run-name: build motd-service
+
+on:
+  push:
+
+permissions:
+  packages: write
+
+env:
+  GH_PASSWORD: '${{ secrets.GITHUB_TOKEN }}'
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v3
+
+      - name: Set up Java
+        uses: actions/setup-java@v2
+        with:
+          java-version: 17
+          distribution: temurin
+
+      - name: Setup Gradle
+        uses: gradle/gradle-build-action@v2
+
+      - name: Make gradlew executable
+        run: chmod +x ./gradlew
+
+      - name: Install skaffold
+        run: |
+          curl -Lo skaffold https://storage.googleapis.com/skaffold/releases/latest/skaffold-linux-amd64 && \
+          sudo install skaffold /usr/local/bin/
+
+      - name: Deactivate collecting skaffold metrics
+        run: skaffold config set --global collect-metrics false
+
+      - name: Login to ghcr.io
+        run: echo $GH_PASSWORD | docker login ghcr.io -u tobias-neubert --password-stdin
+
+      - name: Build the image
+        run: IMAGE_TAG=$(git rev-parse --short "$GITHUB_SHA")-${GITHUB_RUN_NUMBER} skaffold build --file-output=build.json
+
+      - name: Render k8s resources
+        run: mkdir -p rendered && skaffold render -a build.json -o rendered/k8s-resources.yaml
+
+      - name: Pushes k8s resources to app repository
+        uses: cpina/github-action-push-to-another-repository@main
+        env:
+          SSH_DEPLOY_KEY: ${{ secrets.SSH_K8S_TRAINING_KEY }}
+        with:
+          source-directory: 'rendered'
+          target-directory: 'motd-service'
+          destination-github-username: "tobias-neubert"
+          destination-repository-name: 'k8s-training-app'
+          user-email: motd@k8s.training
+          user-name: "Motd Service"
+          target-branch: main

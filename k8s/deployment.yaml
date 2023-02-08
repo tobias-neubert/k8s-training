@@ -17,7 +17,7 @@ spec:
     spec:
       containers:
         - name: motd-service
-          image: neubert/motd-service
+          image: ghcr.io/tobias-neubert/motd-service
           imagePullPolicy: IfNotPresent
           ports:
             - containerPort: 8080

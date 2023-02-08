@@ -25,7 +25,6 @@ public class MotdController {
   public String motd(@PathVariable("name") String name, HttpServletRequest request) {
     request.getHeaderNames().asIterator().forEachRemaining(s -> LOG.info("Header {}: {}", s, request.getHeader(s)));
 
-    String hello = restTemplate.getForObject("http://hello-service:8080/hello/" + name.trim(), String.class);
-    return "This is the message of the day: " + hello;
+    return "This is the message of the day, " + name;
   }
 }

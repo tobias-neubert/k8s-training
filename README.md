@@ -15,11 +15,19 @@ This repository contains my private little training for the above mentioned topi
       - [Check TLS is enabled](#check-tls-is-enabled)
         - [Programmatically in our services](#programmatically-in-our-services)
         - [Investigating network traffic](#investigating-network-traffic)
+  - [A first CI pipeline](#a-first-ci-pipeline)
+    - [The big picture](#the-big-picture)
+    - [Reduce to one service per repository](#reduce-to-one-service-per-repository)
+    - [A first CI pipeline](#a-first-ci-pipeline-1)
+      - [Access for the pipeline to the target repo](#access-for-the-pipeline-to-the-target-repo)
+    - [No secrets in the rendered k8s resources](#no-secrets-in-the-rendered-k8s-resources)
+    - [The base image](#the-base-image)
+    - [Local development](#local-development)
 
 <!-- /TOC -->
 
 ## Prepare the minikube
-Before you can use skaffold to incrementally deploy the application(s), you have to prepare minikube. 
+Before you can use skaffold to incrementally deploy the application(s), you have to prepare out local development environment. 
 
 I assume that you have all needed tools installed on your computer: docker, minikube, skaffold, istioctl, kubectl. Then you can execute the following commands:
 
@@ -72,7 +80,7 @@ or
 Depending on the time of day you may receive ```Good day``` or ```Good evening```.
 
 ## (m)TLS
-Enabling TLS in Kubernetes means
+We will use TLS from the beginning. So lets enable it next. Enabling TLS in Kubernetes means
 
 1. using TLS in between services inside the cluster and
 2. using TLS at the ingress for communicating securely with a client outside the cluster
@@ -145,4 +153,44 @@ Now you can use tcpdump to capture traffic between the motd- and the hello-servi
 
 All you see is encrypted unreadable content. Try the opposite, disable mTLS completely by setting the mode to ```DISABLE``` in ```cluster/k8s/mtls.yaml``` and install it by executing ```skaffold run``` in the root folder of the project. And then repeat the steps from above.
 
-    
+## A first CI pipeline
+Up to now we've learned how to use skaffold for the local development loop. And we configured Istio to use TLS everywhere.
+
+The most important part for me in the early stages of the development of an app is to get something running, and to create a complete development loop from programming, over testing to the deployment of the app. Only then can we really proceed incrementally.
+
+So in this chapter we start by implementing a CI pipeline for our first service, that builds the image, pushes it to our container registry, renders the k8s resources for the target cluster and pushes them to another repo, k8s-training-app, from where we will deploy the app. This last step is done in the next chapter.
+
+### The big picture
+The idea is that we track our current app in the cluster using git. Every microservice will be developed in its own repository. It will be tested and built there. 
+
+The whole app on the other hand, is composed based on this microsoervices inside another repository. That means that the build pipelines of the microsoervices will render the k8s resources needed for the application and push them into the applications repository.
+
+In a later chapter we will react to those new files pushed to the application repository by triggering some kind of deployment to the target cluster.
+
+To learn the basics we will not work with different environments yet. So for example, we will not have any kind of staging environment. Instead we assume that there is currently only one kubbernetes cluster with one running application. 
+
+### Reduce to one service per repository
+The hello service served its purpose. Now, to proceed the forst step is to make this repo a single module project. Every service shall have its own repository. So this is now the repo for the motd-service.
+
+### A first CI pipeline
+We use Github actions for our CI pipeline. You will find it in ```.github/workflows/build-motd-service.yml```.
+
+It is easy, it is short. And nonetheless it took me several days to get it running with skaffold. What I did not undestand is why ```./gradlew jib``` worked perfectly fine, but ```skaffold build``` which only uses the former command to build and push the image to our github repository. 
+
+I needed some time to understand that after skaffold built and pushed the image, it tries to get the new digest of the image by reading it from the repo and that it therefore needs to authenticat against ghcr. But because it does not know about the authentication configuration of the gradle jib plugin, it failed doing so. 
+
+The solution is to call ```docker login ghcr.io``` before we call skaffold. In general this is not a good idea because that way my ghcr password will be saved unencrypted on the build machine in the docker config file. But because github generates a token for each build, I think it does no harm.
+
+#### Access for the pipeline to the target repo
+You have to create a ssh keypair and set the public key to the target repo via settings --> deploy keys of the target repo and the private key to the source repo via settings->secrets and variables->action secret. The name of that secret has to be the one we use in the github actions workflow.
+
+### No secrets in the rendered k8s resources
+Important: Because we now push the rendered k8s resources to another repository in plain text, we have to make sure that no secret will be published. In our case it means we must not publish the tls secrets. We have to install them somewhere else. I think we will do that in the next chapter when we have to prepare the cluster itself.
+
+### The base image
+As you can see in the gradle build file, I chose to push the base image to my private docker registry at ghcr.io. In a production environment you would of course configure your registry as a proxy or mirror for the docker hub.
+
+### Local development
+For local development you now have to save the github user and password in your ```gradle.properties``` file.
+
+

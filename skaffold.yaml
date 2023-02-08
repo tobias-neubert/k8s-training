@@ -1,7 +1,16 @@
-apiVersion: skaffold/v4beta1
+apiVersion: skaffold/v4beta2
 kind: Config
 metadata:
-  name: training
+  name: motd-service
+build:
+  tagPolicy:
+    envTemplate:
+      template: "{{.IMAGE_TAG}}"
+  artifacts:
+    - image: ghcr.io/tobias-neubert/motd-service
+      jib: {}
 manifests:
   rawYaml:
-  - cluster/k8s/mtls.yaml
+    - cluster/k8s/mtls.yaml
+    - k8s/deployment.yaml
+    - k8s/istio.yaml
