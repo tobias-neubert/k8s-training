@@ -1,0 +1,4 @@
+include ":hello-service"
+include ":motd-service"
+
+

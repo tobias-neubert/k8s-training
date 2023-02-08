@@ -1,0 +1,80 @@
+plugins {
+  id 'java'
+  id 'idea'
+  id 'org.springframework.boot' version '3.0.1'
+  id 'com.google.cloud.tools.jib' version '3.3.1'
+  id 'io.spring.dependency-management' version '1.1.0'
+}
+
+java {
+  sourceCompatibility = JavaVersion.VERSION_17
+  targetCompatibility = JavaVersion.VERSION_17
+}
+
+compileJava.options.encoding = "UTF-8"
+compileTestJava.options.encoding = "UTF-8"
+
+configurations {
+  published
+  compileOnly {
+    extendsFrom annotationProcessor
+  }
+}
+
+dependencies {
+  implementation 'org.springframework.boot:spring-boot-starter-web'
+  annotationProcessor 'org.springframework.boot:spring-boot-configuration-processor'
+  testImplementation 'org.springframework.boot:spring-boot-starter-test'
+
+  testImplementation('org.assertj:assertj-core')
+  testImplementation('org.junit.jupiter:junit-jupiter-api')
+  testRuntimeOnly('org.junit.jupiter:junit-jupiter-engine')
+}
+
+
+tasks.withType(Test) {
+  useJUnitPlatform()
+}
+
+task prepareKotlinBuildScriptModel {
+}
+
+springBoot {
+  buildInfo()
+}
+
+bootJar {
+  enabled = false
+}
+
+jar {
+  enabled = true
+}
+
+def baseImage = 'eclipse-temurin:17.0.2_8-jre'
+def toImage = "ghcr.io/tobias-neubert/${project.name}:${project.version}"
+jib {
+  from {
+    image = baseImage
+  }
+  to {
+    image = toImage
+    auth {
+      username = "${System.getenv("GH_USERNAME")}"
+      password = "${System.getenv("GH_PASSWORD")}"
+    }
+  }
+  container {
+    mainClass = 'com.neubert.scaffold.motdservice.MotdServiceApplication'
+    ports = ['8080']
+    labels = [
+      'org.label-schema.schema-version'           : '1.0',
+      'org.label-schema.vendor'                   : 'tobi@s-neubert.net',
+      'org.label-schema.license'                  : "Copyright © ${yearOfBuild} Tobias Neubert".toString(),
+      'org.label-schema.build-date'               : timestampOfBuild,
+      'org.label-schema.version'                  : "${project.version}".toString(),
+      'com.neubert.skaffold.images.base-image'    : baseImage,
+      'maintainer'                                : 'tobi@s-neubert.net'
+    ]
+  }
+}

@@ -1,0 +1,65 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: impolite-hello-deployment
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: hello-service
+      polite: "no"
+  template:
+    metadata:
+      labels:
+        app: hello-service
+        polite: "no"
+    spec:
+      containers:
+        - name: hello-service
+          image: neubert/hello-service
+          imagePullPolicy: IfNotPresent
+          ports:
+            - containerPort: 8080
+          env:
+            - name: COM_NEUBERT_HELLO_POLITE
+              value: "false"
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: polite-hello-deployment
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: hello-service
+      polite: "yes"
+  template:
+    metadata:
+      labels:
+        app: hello-service
+        polite: "yes"
+    spec:
+      containers:
+        - name: hello-service
+          image: neubert/hello-service
+          imagePullPolicy: IfNotPresent
+          ports:
+            - containerPort: 8080
+          env:
+            - name: COM_NEUBERT_HELLO_POLITE
+              value: "true"
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: hello-service
+  labels:
+    app: hello-service
+spec:
+  type: ClusterIP
+  ports:
+    - port: 8080
+      name: http
+  selector:
+    app: hello-service
