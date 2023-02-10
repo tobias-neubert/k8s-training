@@ -54,3 +54,44 @@ or
 
 Depending on the time of day you may receive ```Good day``` or ```Good evening```.
 
+## (m)TLS
+Enabling TLS in Kubernetes means
+
+1. using TLS inbetween services inside of the cluster and
+2. using TLS at the ingress for communicating securly with a client outside the cluster
+   
+As usual with TLS this is not just a question of how to enable or disable it but above all how to create and use the various certificates. This section explains the easiest way of doing it by using a tiny custom certificate authority.
+
+And because mTLS between services inside the cluster is activated per default by istio, we will start with the ingress. But before of this we need to create out tiny training CA.
+
+### Create the training CA and some certificates
+The CA used in this training repo is included in ```motd-service/ca``` and it was created like so:
+
+    # change into the CA's root folder
+    cd motd-service
+    mkdir -p ca/certs ca/private ca/csr 
+    cd ca
+
+With that in place I created the root certificate like so (**the password for the root certificates key is: ```secret```**):
+
+    # create the root certificat and key
+    cd motd-service/ca
+    openssl genrsa -aes256 -out private/ca.key.pem 4096
+    openssl req -x509 -new -nodes -extensions v3_ca -key private/ca.key.pem -days 3650 -sha512 -out certs/ca.cert.pem
+
+And with that I can now create server certificates:
+
+    cd motd-service/ca
+    openssl req -out csr/motd.neubert.csr -newkey rsa:2048 -nodes -keyout private/motd.neubert.key -subj "/C=DE/ST=Hamburg/L=Hamburg/O=Tobias Neubert/OU=Training Center/CN=motd.neubert/emailAddress=tobi@s-neubert.net"
+    openssl x509 -req -sha256 -days 365 -CA certs/ca.cert.pem -CAkey private/ca.key.pem -set_serial 0 -in csr/motd.neubert.csr -out certs/modt.neubert.cert.pem
+
+### TLS for the ingress-gateway
+First we need to tell Istio where to find the server certificate to use for the ingressgateway. This is done as kubernetes tls secret as can be found in ```motd-service/k8s/tls.yml```.
+
+**Important! You have to base64 encode the certificate and key before you insert them into the secrets yaml file!**
+
+Add the ```tls.yaml``` to the skaffold config and reference it in the istio gateway resource. 
+
+Start the motd-service with ```skaffold dev``` and request the service with:
+
+    curl -v -HHost:motd.neubert --resolve "motd.neubert:443:127.0.0.1" --cacert "ca/certs/ca.cert.pem" https://motd.neubert/motd/tobias

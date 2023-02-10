@@ -9,5 +9,6 @@ build:
       project: motd-service
 manifests:
   rawYaml:
+  - k8s/tls.yaml
   - k8s/deployment.yaml
   - k8s/istio.yaml
