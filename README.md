@@ -96,5 +96,38 @@ Start the motd-service with ```skaffold dev``` and request the service with:
 
     curl -v -HHost:motd.neubert --resolve "motd.neubert:443:127.0.0.1" --cacert "ca/certs/ca.cert.pem" https://motd.neubert/motd/tobias
 
+### mTLS for the sidecars
+Istio is configured per default using mTLS in ```PERMISSIVE``` mode, which means, services can accept plain http and https traffic.
+
+So first lets prevent the use of HTTP all together by adding a ```skaffold.yaml``` in the root folder of the project where everything shall be configured that is globally needed by all modules. For example the global mTLS strategy.
+
+#### Check TLS is enabled
+Now, how can we be sure that the motd-service calls the hello-service indeed using TLS? At last, we only use a sinmple ```RestTemplate``` in our motd-service controller, calling explicitly http:
+
+    restTemplate.getForObject("http://hello-service:8080/hello/" + name.trim(), String.class);
+
+##### Programmatically in our services
+Everything happens completely transparently by Istios sidecars. The motd- and hello-service both log the HTTP headers. If you check their logs you will find the header ```x-forwarded-client-cert```. In the documentation it says, that this header is set if mTLS is working.
+
+    [motd-service] 2023-02-12T11:55:57.852Z  INFO 1 --- [nio-8080-exec-9] c.n.scaffold.motdservice.MotdController  : Header x-forwarded-client-cert: By=spiffe://cluster.local/ns/default/sa/default;Hash=903daa98bdbfee8784bfc8266d058968effc9cfdf39e92c0ed4efc949ac9c978;Subject="";URI=spiffe://cluster.local/ns/istio-system/sa/istio-ingressgateway-service-account
+
+##### Investigating network traffic
+If you don't believe the documentation you can capture the network traffix between the services using ```tcpdump``` from within the sidecar.
+
+**Before you can do so, you have to install Istio with ```values.global.proxy.privileged=true```**. We take the opportunity to get rid of the demo profile that we have installed into the cluster up to now by just installing the default profile that serves as a good starting point for production environments.
+
+    istioctl install --set values.global.proxy.privileged=true
+
+Now after starting your services you can interactively exec into the sidecar of the motd-service pod like so
+
+    kubectl exec -ti <pod-name> -c istio-proxy -n <namespace> -- /bin/bash
+
+Now you can use tcpdump to capture traffic between the motd- and the hello-service. Type ```ifconfig``` to get the ip address of the ```eth0``` device. 
+
+    sudo tcpdump -vvvv -A -i eth0 '((dst port 8080 and (net <ip-address>)))'
+
+All you see is encrypted unreadable content. Try the opposite, disable mTLS completely by setting the mode to ```DISABLE``` in ```cluster/k8s/mtls.yaml``` and install it by executing ```skaffold run``` in the root folder of the project. And then repeat the steps from above.
 
 
+
+    

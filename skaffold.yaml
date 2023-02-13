@@ -4,4 +4,4 @@ metadata:
   name: training
 manifests:
   rawYaml:
-  - k8s/mtls.yaml
+  - cluster/k8s/mtls.yaml
