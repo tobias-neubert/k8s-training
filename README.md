@@ -1,6 +1,23 @@
 # Spring, Kubernetes, Istio & Skaffold
 This repository contains my private little training for the above mentioned topics. Each commit on the main branch is one step further into this jungle of technologies. If you want to reproduce my learning curve, simply start with the first commit and proceed with the next until you reach the last one.
 
+<!-- TOC -->
+
+- [Spring, Kubernetes, Istio \& Skaffold](#spring-kubernetes-istio--skaffold)
+  - [Prepare the minikube](#prepare-the-minikube)
+    - [Stopping minikube](#stopping-minikube)
+  - [Start the app](#start-the-app)
+  - [Call the app](#call-the-app)
+  - [(m)TLS](#mtls)
+    - [Create the training CA and some certificates](#create-the-training-ca-and-some-certificates)
+    - [TLS for the ingress-gateway](#tls-for-the-ingress-gateway)
+    - [mTLS for the sidecars](#mtls-for-the-sidecars)
+      - [Check TLS is enabled](#check-tls-is-enabled)
+        - [Programmatically in our services](#programmatically-in-our-services)
+        - [Investigating network traffic](#investigating-network-traffic)
+
+<!-- /TOC -->
+
 ## Prepare the minikube
 Before you can use skaffold to incrementally deploy the application(s), you have to prepare minikube. 
 
@@ -39,7 +56,7 @@ Start both services using skaffold by changing into their corresponding director
     cd motd-service
     skaffold dev
 
-## Test the app
+## Call the app
 You now can call the motd-service like this
 
     curl http://localhost/motd/tobias
@@ -127,7 +144,5 @@ Now you can use tcpdump to capture traffic between the motd- and the hello-servi
     sudo tcpdump -vvvv -A -i eth0 '((dst port 8080 and (net <ip-address>)))'
 
 All you see is encrypted unreadable content. Try the opposite, disable mTLS completely by setting the mode to ```DISABLE``` in ```cluster/k8s/mtls.yaml``` and install it by executing ```skaffold run``` in the root folder of the project. And then repeat the steps from above.
-
-
 
     
