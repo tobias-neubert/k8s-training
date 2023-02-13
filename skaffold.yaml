@@ -1,0 +1,7 @@
+apiVersion: skaffold/v4beta1
+kind: Config
+metadata:
+  name: training
+manifests:
+  rawYaml:
+  - k8s/mtls.yaml

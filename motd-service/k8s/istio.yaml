@@ -1,27 +1,21 @@
-apiVersion: networking.istio.io/v1beta1
-kind: DestinationRule
-metadata:
-  name: motd-service-destination
-spec:
-  host: motd-service
-#  trafficPolicy:
-#    tls:
-#      mode: ISTIO_MUTUAL
 ---
 apiVersion: networking.istio.io/v1alpha3
 kind: Gateway
 metadata:
-  name: motd-gateway
+  name: training-gateway
 spec:
   selector:
-    istio: ingressgateway # use Istio default gateway implementation
+    istio: ingressgateway # use istio default ingress gateway
   servers:
     - port:
-        number: 80
-        name: http
-        protocol: HTTP
+        number: 443
+        name: https
+        protocol: HTTPS
+      tls:
+        mode: SIMPLE
+        credentialName: training-credential # must be the same as secret
       hosts:
-        - "*"
+        - motd.neubert
 ---
 apiVersion: networking.istio.io/v1alpha3
 kind: VirtualService
@@ -29,15 +23,16 @@ metadata:
   name: motd
 spec:
   hosts:
-    - "*"
+    - "motd.neubert"
   gateways:
-    - motd-gateway
+    - training-gateway
   http:
     - match:
         - uri:
             prefix: /motd
       route:
         - destination:
-            host: motd-service
             port:
               number: 8080
+            host: motd-service
+
