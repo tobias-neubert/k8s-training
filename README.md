@@ -23,6 +23,14 @@ This repository contains my private little training for the above mentioned topi
     - [No secrets in the rendered k8s resources](#no-secrets-in-the-rendered-k8s-resources)
     - [The base image](#the-base-image)
     - [Local development](#local-development)
+  - [Setting up a k8s cluster](#setting-up-a-k8s-cluster)
+    - [Setting up an k8s cluster on Azure](#setting-up-an-k8s-cluster-on-azure)
+      - [Setting up Azure Account](#setting-up-azure-account)
+      - [Liste verfügbarer Azure Locations](#liste-verfügbarer-azure-locations)
+      - [Create the cluster](#create-the-cluster)
+        - [Install Packer](#install-packer)
+        - [Create a resource group](#create-a-resource-group)
+        - [Build node images](#build-node-images)
 
 <!-- /TOC -->
 
@@ -194,3 +202,114 @@ As you can see in the gradle build file, I chose to push the base image to my pr
 For local development you now have to save the github user and password in your ```gradle.properties``` file.
 
 
+## Setting up a k8s cluster
+Now its time to setup a cluster for our project. We need some place to deploy our application to. We will do it as quick and dirty as possible, because it is not the intent of this project to learn how to administrate a kubernetes cluster but how to use it as a runtime environment for developing software.
+
+There are two paths into the world of kubernetes: The usage path and the admin path. And yes, they will meet each other at some point. But it turns out, that they meet far, far away from where you are stainding right now, if you are like me and have only rudimentary knowledge about it.
+
+If you try to walk both at the same time it may work, but I believe it will be much harder to get into the flow. Choose one and get familiar with it. In this project I choose the usage path. I want to learn and practice how kubernetes can help me as a developer. If you are interested in the other path, you should stop reading here. This project is not for you :-)
+
+### Setting up an k8s cluster on Azure
+#### Setting up Azure Account
+```
+# create an azure account
+# install azure cli
+az account show
+
+# Install terraform
+wget -O- https://apt.releases.hashicorp.com/gpg | gpg --dearmor | sudo tee /usr/share/keyrings/hashicorp-archive-keyring.gpg
+echo "deb [signed-by=/usr/share/keyrings/hashicorp-archive-keyring.gpg] https://apt.releases.hashicorp.com $(lsb_release -cs) main" | sudo tee /etc/apt/sources.list.d/hashicorp.list
+sudo apt update
+sudo apt install terraform
+
+# azure account einrichten
+Cloud Shell erstellen (rechts oben), dabei einen Speicher erstellen, der kostet. Wieviel?
+Ergebnis notieren:
+[
+  {
+    "name": "Training",
+    "subscriptionId": "0f191be0-fbe0-4d92-bbd7-c00c41ebd4e7",
+    "tenantId": "b5aefa4f-b569-43c6-959d-03d281b829d5"
+  }
+]
+
+az account set --subscription="0f191be0-fbe0-4d92-bbd7-c00c41ebd4e7"
+az ad sp create-for-rbac --role="Contributor" --scopes="/subscriptions/0f191be0-fbe0-4d92-bbd7-c00c41ebd4e7"
+// TODO nicht committen. Geheimnis löschen
+{
+  "appId": "e0f07de8-b3cc-4fad-ae10-3611c8487e02",
+  "displayName": "azure-cli-2023-02-22-14-21-02",
+  "password": "UW28Q~BWcQWWBXrIAxYO~tx0ws4nQOan8gwA~cr3",
+  "tenant": "b5aefa4f-b569-43c6-959d-03d281b829d5"
+}
+
+# in .bashrc
+export ARM_SUBSCRIPTION_ID="0f191be0-fbe0-4d92-bbd7-c00c41ebd4e7"
+export ARM_CLIENT_ID="e0f07de8-b3cc-4fad-ae10-3611c8487e02"
+export ARM_CLIENT_SECRET="UW28Q~BWcQWWBXrIAxYO~tx0ws4nQOan8gwA~cr3"
+export ARM_TENANT_ID="b5aefa4f-b569-43c6-959d-03d281b829d5"
+export ARM_ENVIRONMENT=public
+
+. ~/.bashrc
+
+az login
+```
+
+#### Liste verfügbarer Azure Locations
+```
+az account list-locations -o table
+```
+
+#### Create the cluster
+##### Install Packer
+```
+curl -fsSL https://apt.releases.hashicorp.com/gpg | sudo apt-key add -
+sudo apt-add-repository "deb [arch=amd64] https://apt.releases.hashicorp.com $(lsb_release -cs) main"
+sudo apt install packer
+```
+
+##### Create a resource group
+Needed to store the node images, built with packer
+```
+cd cluster/terraform/k8s-training-resource-group
+terraform init
+terraform plan
+terraform apply 
+```
+
+##### Build node images
+Das passende Image finden für die aktuelle zone war schwierig.
+```
+# find images from Canonical
+# Wichtig: sku UND Offer in die Packer config eintragen
+az vm image list --all --publisher=Canonical
+
+
+# find available vm skus (use --all to see restricted as well)
+# für germanwestcentral gibt es nur total wenig Auswahl
+# germanynorth konnte ich nicht benutzen
+az vm list-skus --location germanywestcentral  --output table
+```
+Als ich dann eine hatte, fehlten Quotas: In der Fehlermeldung ist ein Link enthalten, dem ich dann gefolgt bin.
+
+
+
+
+
+test.tf anlegen und dann 
+```
+#setup terraform script
+cd cluster/terrraform
+terraform init
+```
+
+ausführen um den azurerm runterzuladen. Danach
+
+```
+terraform plan
+terraform apply
+az group list --output table
+```
+
+Um die Resource Group zu erstellen.
+gitignore the *.tfstate terrarform state files!!!
