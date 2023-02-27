@@ -31,6 +31,7 @@ This repository contains my private little training for the above mentioned topi
         - [Install Packer](#install-packer)
         - [Create a resource group](#create-a-resource-group)
         - [Build node images](#build-node-images)
+        - [Create the cluster](#create-the-cluster-1)
 
 <!-- /TOC -->
 
@@ -290,26 +291,28 @@ az vm image list --all --publisher=Canonical
 # germanynorth konnte ich nicht benutzen
 az vm list-skus --location germanywestcentral  --output table
 ```
-Als ich dann eine hatte, fehlten Quotas: In der Fehlermeldung ist ein Link enthalten, dem ich dann gefolgt bin.
-
-
-
-
-
-test.tf anlegen und dann 
-```
-#setup terraform script
-cd cluster/terrraform
-terraform init
-```
-
-ausführen um den azurerm runterzuladen. Danach
 
 ```
-terraform plan
+# convert old json packer file to current jcl files
+packer hcl2_upgrade -with-annotations controller-node.json
+
+packer build worker-node-image.pkr.hcl
+packer build controller-node-image-.pkr.hcl
+```
+
+##### Create the cluster
+
+```
+# create the ssh keypair for the master and worker node
+ssh-keygen -t ed25519 -C "tobiasneubert@k8s-training" -P '' -f "id_ed25519-k8s-training"
+
+cd k8s-training-cluster
 terraform apply
-az group list --output table
 ```
 
-Um die Resource Group zu erstellen.
-gitignore the *.tfstate terrarform state files!!!
+ACHTUNG: DEr ssh key für die VMs, muss ein rsa key sein. Anderes unterstützt azure momentann icht.
+
+Erzeugt:
+1. Ein virtuelles Netzwerk inklusive einer firewall mit zwei Regeln zum Passieren von ssh und https Verkehr auf port 22 und 6443
+
+

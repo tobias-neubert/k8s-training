@@ -1,29 +1,36 @@
-#*********************************
-variable "network-secgrp-name" {
-  default = "test"
+variable "vnet-cidr" {
+  default = ["10.240.0.0/24"]
+  type = list
 }
-variable "resource-grp-name" {
-  default = "test"
+
+variable "resource-group-name" {
+  default = "k8s-training"
 }
-variable "azure-dc" {
+
+variable "azure-location" {
   default = "germanywestcentral"
 }
 
-#*********************************
+variable "vnet-name" {
+  default = "k8s-training"
+}
 
-variable "vpc-cidr" {
-  type = list
-  default = ["10.0.0.0/16"]
+variable "env" {
+  default = "stg"
 }
-variable "vpc-name" {
-  default = "test"
+
+variable "type-of-cluster" {
+  default = "k8s-training"
 }
-variable "subnet1-name" {
-  default = "linkedin-private-a"
+
+variable "vnet-subnet-name" {
+  default = "k8s-training"
 }
-variable "subnet1-cidr" {
-  default = "10.0.1.0/24"
+
+variable "vnet-sec-group-name" {
+  default = "k8s-training"
 }
-variable "env-type" {
-  default = "Devlopment"
+
+variable "subnet_id" {
+  default = "k8s-training"
 }
