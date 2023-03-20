@@ -9,8 +9,19 @@ build:
   artifacts:
     - image: ghcr.io/tobias-neubert/motd-service
       jib: {}
-manifests:
-  rawYaml:
-    - cluster/k8s/mtls.yaml
-    - k8s/deployment.yaml
-    - k8s/istio.yaml
+profiles:
+  - name: dev
+    manifests:
+      kustomize:
+        paths:
+          - kustomize/dev
+  - name: staging
+    manifests:
+      kustomize:
+        paths:
+          - kustomize/staging
+  - name: prod
+    manifests:
+      kustomize:
+        paths:
+          - kustomize/prod
